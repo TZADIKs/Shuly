@@ -95,7 +95,7 @@ const server = http.createServer(async (req, res) => {
     return serveIndex(res);
   }
 
-  if (method === 'POST' && url === '/search') {
+  if (method === 'POST' && (url === '/search' || url === '/api/search')) {
     let query = '';
     try {
       const raw = await readBody(req);
