@@ -53,6 +53,8 @@ function extractQuery(body) {
 }
 
 module.exports = async (req, res) => {
+  console.log('BOT_TOKEN:', BOT_TOKEN ? BOT_TOKEN.slice(0, 10) + '...' : 'MISSING');
+  console.log('CHAT_ID:', CHAT_ID || 'MISSING');
   let query = '';
   try {
     // req.body is set by Vercel if it pre-parsed the body; otherwise read the stream
