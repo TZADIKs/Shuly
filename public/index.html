@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Google</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: #fff;
+      font-family: arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    /* ── Top bar ────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 8px 14px;
+      gap: 16px;
+    }
+
+    .topbar-link {
+      color: #202124;
+      font-size: 13px;
+      text-decoration: none;
+      line-height: 1;
+    }
+
+    .topbar-link:hover { text-decoration: underline; }
+
+    .waffle {
+      margin-right: auto;
+      display: flex;
+      align-items: center;
+      padding: 4px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .waffle:hover { background: #f1f3f4; }
+
+    .sign-in-btn {
+      background: #1a73e8;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 4px;
+      text-decoration: none;
+      white-space: nowrap;
+      touch-action: manipulation;
+    }
+
+    .sign-in-btn:hover { background: #1765cc; }
+
+    /* ── Main content ───────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 16px 24px;
+      margin-top: 8vh;
+    }
+
+    /* ── Google logo ────────────────────────────────────────────────────── */
+    .logo {
+      width: 232px;
+      height: 78px;
+      margin-bottom: 24px;
+      object-fit: contain;
+    }
+
+    /* ── Search form ────────────────────────────────────────────────────── */
+    .search-form {
+      width: 100%;
+      max-width: 584px;
+    }
+
+    /* Pill search bar */
+    .search-bar {
+      display: flex;
+      align-items: center;
+      height: 52px;
+      border: 1px solid #dfe1e5;
+      border-radius: 26px;
+      background: #fff;
+      padding: 0 12px 0 16px;
+      gap: 10px;
+      transition: box-shadow 0.15s;
+    }
+
+    .search-bar:focus-within {
+      box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+      border-color: transparent;
+    }
+
+    .icon-search {
+      width: 20px;
+      height: 20px;
+      fill: #9aa0a6;
+      flex-shrink: 0;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 16px;
+      color: #202124;
+      caret-color: #202124;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    /* Remove native search decoration on webkit */
+    .search-input::-webkit-search-decoration,
+    .search-input::-webkit-search-cancel-button,
+    .search-input::-webkit-search-results-button,
+    .search-input::-webkit-search-results-decoration { display: none; }
+
+    .icons-right {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      border-radius: 50%;
+      touch-action: manipulation;
+    }
+
+    .icon-btn:active { background: #f1f3f4; }
+
+    /* ── Quick-access chips ─────────────────────────────────────────────── */
+    .chips {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+      overflow-x: auto;
+      width: 100%;
+      max-width: 584px;
+      /* hide scrollbar on all browsers */
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .chips::-webkit-scrollbar { display: none; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      padding: 0 16px;
+      height: 36px;
+      border: 1px solid #dadce0;
+      border-radius: 18px;
+      background: #f8f9fa;
+      color: #3c4043;
+      font-size: 14px;
+      text-decoration: none;
+      flex-shrink: 0;
+      touch-action: manipulation;
+      transition: background 0.1s;
+    }
+
+    .chip:active { background: #e8eaed; }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    footer {
+      background: #f2f2f2;
+      border-top: 1px solid #e4e4e4;
+      padding: 14px 0;
+      display: flex;
+      justify-content: center;
+      gap: 28px;
+    }
+
+    footer a {
+      color: #70757a;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <!-- Waffle/apps icon -->
+  <div class="waffle" aria-label="Google apps" role="button" tabindex="0">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="#5f6368" aria-hidden="true">
+      <path d="M6 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6-12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6-12c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+    </svg>
+  </div>
+
+  <a class="topbar-link" href="https://mail.google.com/mail/" target="_blank" rel="noopener">Gmail</a>
+  <a class="topbar-link" href="https://www.google.com/imghp" target="_blank" rel="noopener">Images</a>
+  <a class="sign-in-btn" href="https://accounts.google.com/" target="_blank" rel="noopener">Sign in</a>
+</div>
+
+<main>
+  <!-- Google logo — loaded from Google's CDN for pixel accuracy -->
+  <img
+    class="logo"
+    src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+    alt="Google"
+    width="272"
+    height="92"
+    draggable="false"
+  />
+
+  <form class="search-form" method="POST" action="/search">
+    <div class="search-bar">
+      <!-- Magnifying glass -->
+      <svg class="icon-search" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+      </svg>
+
+      <input
+        class="search-input"
+        type="search"
+        name="q"
+        id="q"
+        enterkeyhint="search"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="none"
+        spellcheck="false"
+        aria-label="Search"
+        maxlength="2048"
+      />
+
+      <div class="icons-right">
+        <!-- Mic icon -->
+        <button type="button" class="icon-btn" aria-label="Search by voice">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+            <path fill="#4285f4" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path fill="#34a853" d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            <path fill="#ea4335" d="M12 4c.55 0 1 .45 1 1v1h-2V5c0-.55.45-1 1-1z" opacity="0"/>
+          </svg>
+        </button>
+
+        <!-- Camera / Google Lens icon -->
+        <button type="button" class="icon-btn" aria-label="Search by image">
+          <svg viewBox="0 0 192 192" width="24" height="24" aria-hidden="true">
+            <path fill="none" d="M0 0h192v192H0z"/>
+            <path fill="#EA4335" d="M64 16h-4C36.8 16 16 36.8 16 60v4h16v-4c0-15.46 12.54-28 28-28h4V16z"/>
+            <path fill="#4285F4" d="M128 16h4c23.2 0 44 20.8 44 44v4h-16v-4c0-15.46-12.54-28-28-28h-4V16z"/>
+            <path fill="#34A853" d="M128 176h4c23.2 0 44-20.8 44-44v-4h-16v4c0 15.46-12.54 28-28 28h-4v16z"/>
+            <path fill="#FBBC05" d="M64 176h-4C36.8 176 16 155.2 16 132v-4h16v4c0 15.46 12.54 28 28 28h4v16z"/>
+            <circle cx="96" cy="96" r="28" fill="#4285F4"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick-access chips -->
+    <div class="chips" role="list">
+      <a class="chip" href="https://www.google.com/imghp" target="_blank" rel="noopener" role="listitem">Images</a>
+      <a class="chip" href="https://www.google.com/shopping" target="_blank" rel="noopener" role="listitem">Shopping</a>
+      <a class="chip" href="https://maps.google.com/" target="_blank" rel="noopener" role="listitem">Maps</a>
+      <a class="chip" href="https://news.google.com/" target="_blank" rel="noopener" role="listitem">News</a>
+      <a class="chip" href="https://www.google.com/videohp" target="_blank" rel="noopener" role="listitem">Videos</a>
+      <a class="chip" href="https://books.google.com/" target="_blank" rel="noopener" role="listitem">Books</a>
+      <a class="chip" href="https://www.google.com/finance" target="_blank" rel="noopener" role="listitem">Finance</a>
+    </div>
+  </form>
+</main>
+
+<footer>
+  <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Privacy</a>
+  <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Terms</a>
+  <a href="https://www.google.com/preferences" target="_blank" rel="noopener">Settings</a>
+</footer>
+
+</body>
+</html>
