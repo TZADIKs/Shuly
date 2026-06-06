@@ -118,6 +118,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (method === 'GET' && url && url.startsWith('/api/suggest')) {
+    const q = (new URL(url, 'http://localhost').searchParams.get('q') || '').trim();
+    res.setHeader('Content-Type', 'application/json');
+    if (!q) { res.writeHead(200); res.end('[]'); return; }
+    try {
+      const upstream = await fetch(
+        'https://suggestqueries.google.com/complete/search?client=firefox&hl=en&q=' +
+        encodeURIComponent(q),
+        { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0' } }
+      );
+      const data = JSON.parse(await upstream.text());
+      res.writeHead(200);
+      res.end(JSON.stringify(data[1] || []));
+    } catch (_) {
+      res.writeHead(200);
+      res.end('[]');
+    }
+    return;
+  }
+
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('Not Found');
 });

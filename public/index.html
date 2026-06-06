@@ -88,6 +88,10 @@
       max-width: 584px;
     }
 
+    .search-wrapper {
+      position: relative;
+    }
+
     /* Pill search bar */
     .search-bar {
       display: flex;
@@ -204,6 +208,71 @@
     }
 
     footer a:hover { text-decoration: underline; }
+
+    /* ── Autocomplete ───────────────────────────────────────────────────── */
+    .search-bar.sg-active,
+    .search-bar.sg-active:focus-within {
+      border-radius: 26px 26px 0 0;
+      border-color: rgba(32,33,36,.28);
+      border-bottom-color: transparent;
+      box-shadow: 0 1px 6px rgba(32,33,36,.28);
+    }
+
+    #sg-box {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid rgba(32,33,36,.28);
+      border-top: 1px solid #e4e4e4;
+      border-radius: 0 0 24px 24px;
+      box-shadow: 0 4px 6px rgba(32,33,36,.18);
+      overflow: hidden;
+      padding-bottom: 4px;
+      z-index: 100;
+    }
+
+    #sg-box.on { display: block; }
+
+    .sg-row {
+      display: flex;
+      align-items: center;
+      min-height: 46px;
+      padding: 0 4px 0 16px;
+      cursor: pointer;
+      gap: 12px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sg-row.hi { background: #f8f9fa; }
+
+    .sg-mag {
+      flex-shrink: 0;
+      fill: #9aa0a6;
+    }
+
+    .sg-txt {
+      flex: 1;
+      font-size: 16px;
+      color: #202124;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sg-fill {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
@@ -234,6 +303,7 @@
   />
 
   <form class="search-form" method="POST" action="/api/search">
+    <div class="search-wrapper">
     <div class="search-bar">
       <!-- Magnifying glass -->
       <svg class="icon-search" viewBox="0 0 24 24" aria-hidden="true">
@@ -278,6 +348,9 @@
       </div>
     </div>
 
+    <div id="sg-box" role="listbox" aria-label="Search suggestions"></div>
+    </div><!-- /.search-wrapper -->
+
     <!-- Quick-access chips -->
     <div class="chips" role="list">
       <a class="chip" href="https://www.google.com/imghp" target="_blank" rel="noopener" role="listitem">Images</a>
@@ -296,6 +369,150 @@
   <a href="https://policies.google.com/terms" target="_blank" rel="noopener">Terms</a>
   <a href="https://www.google.com/preferences" target="_blank" rel="noopener">Settings</a>
 </footer>
+
+<script>
+(function () {
+  var input = document.getElementById('q');
+  var form  = document.querySelector('.search-form');
+  var bar   = document.querySelector('.search-bar');
+  var box   = document.getElementById('sg-box');
+
+  var timer     = null;
+  var baseQuery = '';
+  var items     = [];
+  var activeIdx = -1;
+
+  var MAG_PATH  = 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z';
+  var FILL_PATH = 'M20 5.41L18.59 4 7 15.59V9H5v10h10v-2H8.41z';
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function render(list) {
+    items     = list.slice(0, 8);
+    activeIdx = -1;
+    if (!items.length) { close(); return; }
+
+    box.innerHTML = items.map(function (s, i) {
+      var es = esc(s);
+      return '<div class="sg-row" role="option" data-i="' + i + '">' +
+        '<svg class="sg-mag" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="' + MAG_PATH + '"/></svg>' +
+        '<span class="sg-txt">' + es + '</span>' +
+        '<button class="sg-fill" type="button" data-val="' + es + '" aria-label="Fill: ' + es + '">' +
+          '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="#bdc1c6" d="' + FILL_PATH + '"/></svg>' +
+        '</button>' +
+      '</div>';
+    }).join('');
+
+    box.classList.add('on');
+    bar.classList.add('sg-active');
+  }
+
+  function close() {
+    box.classList.remove('on');
+    bar.classList.remove('sg-active');
+    activeIdx = -1;
+    items     = [];
+  }
+
+  function setHighlight(idx) {
+    var rows = box.querySelectorAll('.sg-row');
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.toggle('hi', i === idx);
+    }
+    input.value = idx === -1 ? baseQuery : items[idx];
+  }
+
+  async function suggest(q) {
+    if (!q.trim()) { close(); return; }
+    try {
+      var url = '/api/suggest?q=' + encodeURIComponent(q);
+      var res = await fetch(url);
+      var data = await res.json();
+      if (input.value === q) render(data || []);
+    } catch (_) { /* CORS or network — silently skip */ }
+  }
+
+  input.addEventListener('input', function () {
+    baseQuery = this.value;
+    clearTimeout(timer);
+    if (!this.value.trim()) { close(); return; }
+    var q = this.value;
+    timer = setTimeout(function () { suggest(q); }, 150);
+  });
+
+  input.addEventListener('keydown', function (e) {
+    var rows = box.querySelectorAll('.sg-row');
+    if (!rows.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, rows.length - 1);
+      setHighlight(activeIdx);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, -1);
+      setHighlight(activeIdx);
+    } else if (e.key === 'Escape') {
+      input.value = baseQuery;
+      close();
+      input.blur();
+    }
+  });
+
+  input.addEventListener('focus', function () {
+    if (this.value.trim() && !box.classList.contains('on')) {
+      suggest(this.value);
+    }
+  });
+
+  input.addEventListener('blur', function () {
+    setTimeout(close, 160);
+  });
+
+  /* mousedown fires before blur, so preventDefault keeps focus in input */
+  box.addEventListener('mousedown', function (e) {
+    var fill = e.target.closest('.sg-fill');
+    if (fill) {
+      e.preventDefault();
+      input.value = fill.dataset.val;
+      baseQuery   = fill.dataset.val;
+      input.focus();
+      suggest(fill.dataset.val);
+      return;
+    }
+    var row = e.target.closest('.sg-row');
+    if (row) {
+      e.preventDefault();
+      input.value = items[+row.dataset.i];
+      form.submit();
+    }
+  });
+
+  /* touch devices: same logic via touchend */
+  box.addEventListener('touchend', function (e) {
+    var fill = e.target.closest('.sg-fill');
+    if (fill) {
+      e.preventDefault();
+      input.value = fill.dataset.val;
+      baseQuery   = fill.dataset.val;
+      input.focus();
+      suggest(fill.dataset.val);
+      return;
+    }
+    var row = e.target.closest('.sg-row');
+    if (row) {
+      e.preventDefault();
+      input.value = items[+row.dataset.i];
+      form.submit();
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!form.contains(e.target)) close();
+  });
+})();
+</script>
 
 </body>
 </html>
